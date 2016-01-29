@@ -652,5 +652,5 @@ void rcOffsetFrameReceive(uint16_t *frame, int channelCount)
     	rcOffset[i] = 0;
     }
 
-    rcOffsetUpdateAt = currentTime;
+    rcOffsetUpdateAt = millis();
 }
