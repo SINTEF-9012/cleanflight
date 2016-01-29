@@ -1125,6 +1125,23 @@ static bool processInCommand(void)
             }
         }
         break;
+    case MSP_SET_OFFSETT_RC:
+    	{
+    		uint8_t channelCount = currentPort->dataSize / sizeof(uint16_t);
+			if (channelCount > 4) {
+				headSerialError(0);
+			} else {
+				uint16_t frame[4];
+
+				for (i = 0; i < channelCount; i++) {
+					frame[i] = read16();
+				}
+
+				rcOffsetFrameReceive(frame, channelCount);
+			}
+    	}
+    	break;
+    // TODO: JAKOB SINTEF - Add a new message type that can set offset RC values, but reset after say .5 seconds, to disable if sending code crashes
     case MSP_SET_ACC_TRIM:
         currentProfile->accelerometerTrims.values.pitch = read16();
         currentProfile->accelerometerTrims.values.roll  = read16();

@@ -171,6 +171,18 @@ void annexCode(void)
     int32_t tmp, tmp2;
     int32_t axis, prop1 = 0, prop2;
 
+    // TODO: SINTEF JAKOB - Add offsets somewhere in this code, so that it is not affected by deadbands,
+    // and so that it does not affect command stick-positions
+    if (rcOffsetUpdateAt - currentTime > 500000) {
+    	// Set all offsets to zero if old command
+    	for (axis = 0; axis < 4; axis++) {
+    		rcOffset[axis] = 0;
+    	}
+    }
+
+    int16_t tmpThrottle = rcData[THROTTLE];
+    rcData[THROTTLE] += rcOffset[THROTTLE];
+
     // PITCH & ROLL only dynamic PID adjustment,  depending on throttle value
     if (rcData[THROTTLE] < currentControlRateProfile->tpa_breakpoint) {
         prop2 = 100;
@@ -192,6 +204,7 @@ void annexCode(void)
                     tmp = 0;
                 }
             }
+            tmp += rcOffset[axis];
 
             tmp2 = tmp / 100;
             rcCommand[axis] = lookupPitchRollRC[tmp2] + (tmp - tmp2 * 100) * (lookupPitchRollRC[tmp2 + 1] - lookupPitchRollRC[tmp2]) / 100;
@@ -205,6 +218,8 @@ void annexCode(void)
                     tmp = 0;
                 }
             }
+            tmp += rcOffset[axis];
+
             tmp2 = tmp / 100;
             rcCommand[axis] = (lookupYawRC[tmp2] + (tmp - tmp2 * 100) * (lookupYawRC[tmp2 + 1] - lookupYawRC[tmp2]) / 100) * -masterConfig.yaw_control_direction;
             prop1 = 100 - (uint16_t)currentControlRateProfile->rates[axis] * ABS(tmp) / 500;
@@ -239,6 +254,9 @@ void annexCode(void)
         rcCommand[ROLL] = rcCommand[ROLL] * cosDiff - rcCommand[PITCH] * sinDiff;
         rcCommand[PITCH] = rcCommand_PITCH;
     }
+
+    // Throttle calculations done, reset rcData to value before offset
+    rcData[THROTTLE] = tmpThrottle;
 
     if (ARMING_FLAG(ARMED)) {
         LED0_ON;

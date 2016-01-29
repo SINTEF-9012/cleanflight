@@ -59,7 +59,8 @@
 #define MSP_PROTOCOL_VERSION                0
 
 #define API_VERSION_MAJOR                   1 // increment when major changes are made
-#define API_VERSION_MINOR                   15 // increment when any change is made, reset to zero when major changes are released after changing API_VERSION_MAJOR
+#define API_VERSION_MINOR                   16 // increment when any change is made, reset to zero when major changes are released after changing API_VERSION_MAJOR
+// SINTEF JAKOB - Did I need to change this?
 
 #define API_VERSION_LENGTH                  2
 
@@ -174,6 +175,12 @@ static const char * const boardIdentifier = TARGET_BOARD_IDENTIFIER;
 
 // DEPRECATED - Use MSP_BUILD_INFO instead
 #define MSP_BF_BUILD_INFO               69 //out message build date as well as some space for future expansion
+
+
+//
+// SINTEF JAKOB - Additional MSP commands
+//
+#define MSP_SET_OFFSETT_RC           80    //in message          roll, pitch, yaw, throttle offset values
 
 //
 // Multwii original MSP commands

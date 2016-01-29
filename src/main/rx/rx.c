@@ -80,9 +80,11 @@ static uint32_t rxUpdateAt = 0;
 static uint32_t needRxSignalBefore = 0;
 static uint32_t suspendRxSignalUntil = 0;
 static uint8_t  skipRxSamples = 0;
+uint32_t rcOffsetUpdateAt = 0;
 
-int16_t rcRaw[MAX_SUPPORTED_RC_CHANNEL_COUNT];     // interval [1000;2000]
-int16_t rcData[MAX_SUPPORTED_RC_CHANNEL_COUNT];     // interval [1000;2000]
+int16_t rcRaw[MAX_SUPPORTED_RC_CHANNEL_COUNT];		// interval [1000;2000]
+int16_t rcData[MAX_SUPPORTED_RC_CHANNEL_COUNT];		// interval [1000;2000]
+int16_t rcOffset[4];								// interval [-500;500]
 uint32_t rcInvalidPulsPeriod[MAX_SUPPORTED_RC_CHANNEL_COUNT];
 
 #define MAX_INVALID_PULS_TIME    300
@@ -463,6 +465,10 @@ static void readRxChannelsApplyRanges(void)
         // sample the channel
         uint16_t sample = rcReadRawFunc(&rxRuntimeConfig, rawChannel);
 
+        // TODO: JAKOB SINTEF - Put offset override values here
+        // Use the static mapping from "rc_alias_e" in "rc_controls.h"
+        // Also do some checking so that offsets will not completely override controls if they are set to an incorrect value
+
         // apply the rx calibration
         if (channel < NON_AUX_CHANNEL_COUNT) {
             sample = applyRxChannelRangeConfiguraton(sample, rxConfig->channelRanges[channel]);
@@ -634,3 +640,17 @@ void initRxRefreshRate(uint16_t *rxRefreshRatePtr) {
     *rxRefreshRatePtr = rxRefreshRate;
 }
 
+// SINTEF JAKOB - Is this the best place to put this?
+void rcOffsetFrameReceive(uint16_t *frame, int channelCount)
+{
+    for (int i = 0; i < channelCount; i++) {
+        rcOffset[i] = frame[i];
+    }
+
+    // Any channels not provided will be reset to zero
+    for (int i = channelCount; i < 4; i++) {
+    	rcOffset[i] = 0;
+    }
+
+    rcOffsetUpdateAt = currentTime;
+}
