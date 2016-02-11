@@ -525,6 +525,11 @@ void processRx(void)
 
     if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) {
         LED1_ON;
+    } else if (FLIGHT_MODE(MOTORTEST_MODE)) {
+    	if (millis() & (1 << 7))
+    		LED1_ON;
+    	else
+    		LED1_OFF;
     } else {
         LED1_OFF;
     }

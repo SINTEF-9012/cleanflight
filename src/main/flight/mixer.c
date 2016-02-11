@@ -818,6 +818,22 @@ void mixTable(void)
                 }
             }
         }
+        // SINTEF ICT - JAKOB: Added mode to allow for testing of motors infividually (NOT COMPLETE!)
+        if (FLIGHT_MODE(MOTORTEST_MODE)) {
+        	for (i = 0; i < motorCount; i++) {
+				motor[i] = motor_disarmed[i];
+			}
+        	// Power one motor at a time
+        	if ((rcData[ROLL] < rxConfig->mincheck || rcData[ROLL] > rxConfig->maxcheck) && (rcData[ROLL] < rxConfig->mincheck || rcData[ROLL] > rxConfig->maxcheck)) {
+				i = 0;
+				if (rcData[PITCH] > rxConfig->maxcheck)
+					i += 1;
+				if (rcData[ROLL] < rxConfig->mincheck)
+					i += 2;
+				motor[i] = rcCommand[THROTTLE];
+        	}
+        }
+
     } else {
         for (i = 0; i < motorCount; i++) {
             motor[i] = motor_disarmed[i];
