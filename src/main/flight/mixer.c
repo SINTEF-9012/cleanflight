@@ -824,13 +824,16 @@ void mixTable(void)
 				motor[i] = motor_disarmed[i];
 			}
         	// Power one motor at a time
-        	if ((rcData[ROLL] < rxConfig->mincheck || rcData[ROLL] > rxConfig->maxcheck) && (rcData[ROLL] < rxConfig->mincheck || rcData[ROLL] > rxConfig->maxcheck)) {
-				i = 0;
-				if (rcData[PITCH] > rxConfig->maxcheck)
-					i += 1;
-				if (rcData[ROLL] < rxConfig->mincheck)
-					i += 2;
-				motor[i] = rcCommand[THROTTLE];
+        	if ((rcData[THROTTLE]) > rxConfig->mincheck) {
+				if ((rcData[ROLL] < rxConfig->mincheck || rcData[ROLL] > rxConfig->maxcheck) &&
+					(rcData[ROLL] < rxConfig->mincheck || rcData[ROLL] > rxConfig->maxcheck))   {
+					i = 0;
+					if (rcData[PITCH] > rxConfig->maxcheck)
+						i += 1;
+					if (rcData[ROLL] < rxConfig->mincheck)
+						i += 2;
+					motor[i] = rcCommand[THROTTLE];
+				}
         	}
         }
 
