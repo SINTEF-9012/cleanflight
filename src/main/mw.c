@@ -511,6 +511,13 @@ void processRx(void)
         DISABLE_FLIGHT_MODE(ANGLE_MODE); // failsafe support
     }
 
+    if (IS_RC_MODE_ACTIVE(BOXMOTORTEST)) {
+    	if (!FLIGHT_MODE(MOTORTEST_MODE))
+    		ENABLE_FLIGHT_MODE(MOTORTEST_MODE);
+    } else {
+    	DISABLE_FLIGHT_MODE(MOTORTEST_MODE);
+    }
+
     if (IS_RC_MODE_ACTIVE(BOXHORIZON) && canUseHorizonMode) {
 
         DISABLE_FLIGHT_MODE(ANGLE_MODE);
