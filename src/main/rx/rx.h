@@ -76,7 +76,7 @@ extern const char rcChannelLetters[];
 
 extern int16_t rcData[MAX_SUPPORTED_RC_CHANNEL_COUNT];       // interval [1000;2000]
 extern int16_t rcOffset[4];								// interval [-500;500]
-extern uint32_t rcOffsetUpdateAt;
+extern volatile uint32_t rcOffsetUpdateAt;
 
 
 #define MAX_MAPPABLE_RX_INPUTS 8

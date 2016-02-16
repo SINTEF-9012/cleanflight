@@ -80,7 +80,7 @@ static uint32_t rxUpdateAt = 0;
 static uint32_t needRxSignalBefore = 0;
 static uint32_t suspendRxSignalUntil = 0;
 static uint8_t  skipRxSamples = 0;
-uint32_t rcOffsetUpdateAt = 0;
+volatile uint32_t rcOffsetUpdateAt = 0;
 
 int16_t rcRaw[MAX_SUPPORTED_RC_CHANNEL_COUNT];		// interval [1000;2000]
 int16_t rcData[MAX_SUPPORTED_RC_CHANNEL_COUNT];		// interval [1000;2000]
