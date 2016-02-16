@@ -173,7 +173,7 @@ void annexCode(void)
 
     // TODO: SINTEF JAKOB - Add offsets somewhere in this code, so that it is not affected by deadbands,
     // and so that it does not affect command stick-positions
-    if (rcOffsetUpdateAt - currentTime > 500000) {
+    if (rcOffsetUpdateAt - millis() > 500) {
     	// Set all offsets to zero if old command
     	for (axis = 0; axis < 4; axis++) {
     		rcOffset[axis] = 0;
