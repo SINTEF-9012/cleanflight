@@ -160,3 +160,6 @@ void suspendRxSignal(void);
 void resumeRxSignal(void);
 
 void initRxRefreshRate(uint16_t *rxRefreshRatePtr);
+
+// SINTEF JAKOB - Is this the best place to put this?
+void rcOffsetFrameReceive(uint16_t *frame, int channelCount);
