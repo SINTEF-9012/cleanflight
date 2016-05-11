@@ -19,3 +19,8 @@
 
 bool rxMspFrameComplete(void);
 void rxMspFrameReceive(uint16_t *frame, int channelCount);
+void rxMspInit(rxRuntimeConfig_t *rxRuntimeConfig, rcReadRawDataPtr *callback);
+
+// SINTEF JAKOB - Is this the best place to put this?
+void rxMspOffsetFrameReceive(int16_t *frame, int channelCount);
+int16_t rxMspReadOffsetRC(rxRuntimeConfig_t *rxRuntimeConfigPtr, uint8_t chan);

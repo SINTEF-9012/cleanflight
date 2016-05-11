@@ -18,9 +18,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "platform.h"
+#include <platform.h>
+
+#include "common/maths.h"
 
 #include "build_config.h"
+
+#include "config/parameter_group.h"
 
 #include "drivers/system.h"
 
@@ -33,6 +37,10 @@
 
 static uint16_t mspFrame[MAX_SUPPORTED_RC_CHANNEL_COUNT];
 static bool rxMspFrameDone = false;
+
+static uint32_t mspOffsetUpdateAt = 0;
+static bool mspOffsetFrameReady = false;
+static int16_t mspOffsetFrame[4]; // interval [-500;500]
 
 static uint16_t rxMspReadRawRC(rxRuntimeConfig_t *rxRuntimeConfigPtr, uint8_t chan)
 {
@@ -64,10 +72,41 @@ bool rxMspFrameComplete(void)
     return true;
 }
 
-void rxMspInit(rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig, rcReadRawDataPtr *callback)
+void rxMspInit(rxRuntimeConfig_t *rxRuntimeConfig, rcReadRawDataPtr *callback)
 {
-    UNUSED(rxConfig);
     rxRuntimeConfig->channelCount = MAX_SUPPORTED_RC_CHANNEL_COUNT;
     if (callback)
         *callback = rxMspReadRawRC;
+}
+
+
+// SINTEF JAKOB - Is this the best place to put this?
+void rxMspOffsetFrameReceive(int16_t *frame, int channelCount)
+{
+    for (int i = 0; i < channelCount; i++) {
+    	mspOffsetFrame[i] = constrain(frame[i],-500,500);
+    }
+
+    // Any channels not provided will be reset to zero
+    for (int i = channelCount; i < 4; i++) {
+    	mspOffsetFrame[i] = 0;
+    }
+
+    mspOffsetUpdateAt = millis();
+    mspOffsetFrameReady = true;
+}
+int16_t rxMspReadOffsetRC(rxRuntimeConfig_t *rxRuntimeConfigPtr, uint8_t chan)
+{
+    UNUSED(rxRuntimeConfigPtr);
+
+    if (chan >= 4)
+    	return 0;
+    if (!mspOffsetFrameReady)
+    	return 0;
+    if (millis() - mspOffsetUpdateAt > 500) {
+    	mspOffsetFrameReady = false;
+    	return 0;
+    }
+
+    return mspOffsetFrame[chan];
 }

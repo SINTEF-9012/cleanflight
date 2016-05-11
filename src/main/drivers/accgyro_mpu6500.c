@@ -19,7 +19,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "platform.h"
+#include <platform.h>
+#include "build_config.h"
 
 #include "common/axis.h"
 #include "common/maths.h"
@@ -33,8 +34,6 @@
 #include "accgyro.h"
 #include "accgyro_mpu.h"
 #include "accgyro_mpu6500.h"
-
-extern uint16_t acc_1G;
 
 bool mpu6500AccDetect(acc_t *acc)
 {
@@ -64,29 +63,16 @@ bool mpu6500GyroDetect(gyro_t *gyro)
     return true;
 }
 
-void mpu6500AccInit(void)
+void mpu6500AccInit(acc_t *acc)
 {
     mpuIntExtiInit();
 
-    acc_1G = 512 * 8;
+    acc->acc_1G = 512 * 8;
 }
 
 void mpu6500GyroInit(uint8_t lpf)
 {
     mpuIntExtiInit();
-
-#ifdef NAZE
-    // FIXME target specific code in driver code.
-
-    gpio_config_t gpio;
-    // MPU_INT output on rev5 hardware (PC13). rev4 was on PB13, conflicts with SPI devices
-    if (hse_value == 12000000) {
-        gpio.pin = Pin_13;
-        gpio.speed = Speed_2MHz;
-        gpio.mode = Mode_IN_FLOATING;
-        gpioInit(GPIOC, &gpio);
-    }
-#endif
 
     mpuConfiguration.write(MPU_RA_PWR_MGMT_1, MPU6500_BIT_RESET);
     delay(100);
@@ -101,9 +87,12 @@ void mpu6500GyroInit(uint8_t lpf)
     mpuConfiguration.write(MPU_RA_SMPLRT_DIV, gyroMPU6xxxCalculateDivider()); // Get Divider
 
     // Data ready interrupt configuration
+#ifdef USE_MPU9250_MAG
     mpuConfiguration.write(MPU_RA_INT_PIN_CFG, 0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | 0 << 2 | 1 << 1 | 0 << 0);  // INT_ANYRD_2CLEAR, BYPASS_EN
+#else
+    mpuConfiguration.write(MPU_RA_INT_PIN_CFG, 0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | 0 << 2 | 0 << 1 | 0 << 0);  // INT_ANYRD_2CLEAR, BYPASS_EN
+#endif
 #ifdef USE_MPU_DATA_READY_SIGNAL
     mpuConfiguration.write(MPU_RA_INT_ENABLE, 0x01); // RAW_RDY_EN interrupt enable
 #endif
-
 }
