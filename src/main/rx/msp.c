@@ -25,6 +25,7 @@
 #include "build_config.h"
 
 #include "config/parameter_group.h"
+#include "config/runtime_config.h"
 
 #include "drivers/system.h"
 
@@ -95,15 +96,19 @@ void rxMspOffsetFrameReceive(int16_t *frame, int channelCount)
     mspOffsetUpdateAt = millis();
     mspOffsetFrameReady = true;
 }
+
 int16_t rxMspReadOffsetRC(rxRuntimeConfig_t *rxRuntimeConfigPtr, uint8_t chan)
 {
     UNUSED(rxRuntimeConfigPtr);
+
+    if (!FLIGHT_MODE(RCOFFSETS_MODE))
+    	return 0;
 
     if (chan >= 4)
     	return 0;
     if (!mspOffsetFrameReady)
     	return 0;
-    if (millis() - mspOffsetUpdateAt > 500) {
+    if (millis() - mspOffsetUpdateAt > 100) {
     	mspOffsetFrameReady = false;
     	return 0;
     }

@@ -180,7 +180,8 @@ void processRxDependentCoefficients(void) {
 
     // TODO: SINTEF JAKOB - Add offsets somewhere in this code, so that it is not affected by deadbands,
     // and so that it does not affect command stick-positions
-    int16_t tmpThrottle = rcData[THROTTLE] + rxMspReadOffsetRC(&rxRuntimeConfig, THROTTLE);
+    int16_t tmpThrottle = rcData[THROTTLE];
+    rcData[THROTTLE] = rcData[THROTTLE] + rxMspReadOffsetRC(&rxRuntimeConfig, THROTTLE);
 
     // PITCH & ROLL only dynamic PID adjustment,  depending on throttle value
     if (rcData[THROTTLE] < currentControlRateProfile->tpa_breakpoint) {
@@ -203,7 +204,7 @@ void processRxDependentCoefficients(void) {
                     tmp = 0;
                 }
             }
-            tmp += rxMspReadOffsetRC(&rxRuntimeConfig, axis);
+            //tmp += rxMspReadOffsetRC(&rxRuntimeConfig, axis);
 
             tmp2 = tmp / 100;
             rcCommand[axis] = lookupPitchRollRC[tmp2] + (tmp - tmp2 * 100) * (lookupPitchRollRC[tmp2 + 1] - lookupPitchRollRC[tmp2]) / 100;
@@ -217,7 +218,7 @@ void processRxDependentCoefficients(void) {
                     tmp = 0;
                 }
             }
-            tmp += rxMspReadOffsetRC(&rxRuntimeConfig, axis);
+            //tmp += rxMspReadOffsetRC(&rxRuntimeConfig, axis);
 
             tmp2 = tmp / 100;
             rcCommand[axis] = (lookupYawRC[tmp2] + (tmp - tmp2 * 100) * (lookupYawRC[tmp2 + 1] - lookupYawRC[tmp2]) / 100) * -rcControlsConfig()->yaw_control_direction;
@@ -239,6 +240,8 @@ void processRxDependentCoefficients(void) {
 
         if (rcData[axis] < rxConfig()->midrc)
             rcCommand[axis] = -rcCommand[axis];
+
+        rcCommand[axis] += rxMspReadOffsetRC(&rxRuntimeConfig, axis);
     }
 
     tmp = constrain(rcData[THROTTLE], rxConfig()->mincheck, PWM_RANGE_MAX);
@@ -542,6 +545,15 @@ void processRx(void)
     	}
     }
 
+    if (rcModeIsActive(BOXRCOFFSETS)) {
+        if (!FLIGHT_MODE(RCOFFSETS_MODE))
+			ENABLE_FLIGHT_MODE(RCOFFSETS_MODE);
+	} else {
+		if (FLIGHT_MODE(RCOFFSETS_MODE)) {
+			DISABLE_FLIGHT_MODE(RCOFFSETS_MODE);
+		}
+	}
+
     if (rcModeIsActive(BOXHORIZON) && canUseHorizonMode) {
         DISABLE_FLIGHT_MODE(ANGLE_MODE);
 
@@ -555,13 +567,14 @@ void processRx(void)
         DISABLE_FLIGHT_MODE(HORIZON_MODE);
     }
 
-    if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) {
-        LED1_ON;
-    } else if (FLIGHT_MODE(MOTORTEST_MODE)) {
+
+	if (FLIGHT_MODE(MOTORTEST_MODE) || FLIGHT_MODE(RCOFFSETS_MODE)) {
     	if (millis() & (1 << 7))
     		LED1_ON;
     	else
     		LED1_OFF;
+    } else if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) {
+    	LED1_ON;
     } else {
         LED1_OFF;
     }

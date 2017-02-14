@@ -142,6 +142,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT] = {
     { "FAILSAFE",  BOXFAILSAFE,  27 },
     { "AIR MODE",  BOXAIRMODE,   28 },
 	{ "MOTORTEST", BOXMOTORTEST, 29 },
+	{ "RC OFFSETS",BOXRCOFFSETS, 30 },
 };
 
 // mask of enabled IDs, calculated on start based on enabled features. boxId_e is used as bit index.
@@ -251,6 +252,8 @@ static void initActiveBoxIds(void)
 
     ena |= 1 << BOXMOTORTEST;
 
+    ena |= 1 << BOXRCOFFSETS;
+
     if (sensors(SENSOR_ACC) || sensors(SENSOR_MAG)) {
         ena |= 1 << BOXMAG;
         ena |= 1 << BOXHEADFREE;
@@ -351,7 +354,7 @@ static uint32_t packFlightModeFlags(void)
 #define BM(x) (1 << (x))
     const uint32_t rcModeCopyMask = BM(BOXHEADADJ) | BM(BOXCAMSTAB) | BM(BOXCAMTRIG) | BM(BOXBEEPERON)
         | BM(BOXLEDMAX) | BM(BOXLEDLOW) | BM(BOXLLIGHTS) | BM(BOXCALIB) | BM(BOXGOV) | BM(BOXOSD)
-        | BM(BOXTELEMETRY) | BM(BOXGTUNE) | BM(BOXBLACKBOX) | BM(BOXMOTORTEST);
+        | BM(BOXTELEMETRY) | BM(BOXGTUNE) | BM(BOXBLACKBOX) | BM(BOXMOTORTEST) | BM(BOXRCOFFSETS);
     for(unsigned i = 0; i < sizeof(rcModeCopyMask) * 8; i++) {
         if((rcModeCopyMask & BM(i)) == 0)
             continue;

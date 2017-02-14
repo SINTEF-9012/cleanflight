@@ -43,7 +43,8 @@ typedef enum {
     SONAR_MODE      = (1 << 9),
     FAILSAFE_MODE   = (1 << 10),
     GTUNE_MODE      = (1 << 11),
-	MOTORTEST_MODE  = (1 << 12), // SINTEF ICT - JAKOB: Added mode to allow for testing of motors infividually (NOT COMPLETE!)
+	MOTORTEST_MODE  = (1 << 12), // SINTEF ICT - JAKOB: Added mode to allow for testing of motors individually (NOT COMPLETE!)
+	RCOFFSETS_MODE  = (1 << 13), // SINTEF ICT - JAKOB: Added mode to allow for MSP commands to write RC offsets
 } flightModeFlags_e;
 
 extern uint16_t flightModeFlags;
