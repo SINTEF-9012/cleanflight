@@ -103,3 +103,4 @@ float acos_approx(float x);
 #endif
 
 void arraySubInt32(int32_t *dest, int32_t *array1, int32_t *array2, int count);
+void arraySubInt16(int16_t *dest, int16_t *array1, int16_t *array2, int count);

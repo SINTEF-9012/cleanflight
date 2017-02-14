@@ -287,3 +287,10 @@ void arraySubInt32(int32_t *dest, int32_t *array1, int32_t *array2, int count)
         dest[i] = array1[i] - array2[i];
     }
 }
+
+void arraySubInt16(int16_t *dest, int16_t *array1, int16_t *array2, int count)
+{
+    for (int i = 0; i < count; i++) {
+        dest[i] = array1[i] - array2[i];
+    }
+}
