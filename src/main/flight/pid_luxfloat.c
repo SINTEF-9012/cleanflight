@@ -130,6 +130,8 @@ STATIC_UNIT_TESTED int16_t pidLuxFloatCore(int axis, const pidProfile_t *pidProf
     axisPID_P[axis] = PTerm;
     axisPID_I[axis] = ITerm;
     axisPID_D[axis] = DTerm;
+    axisPID_setpoint[axis] = (int32_t)angleRate;
+    axisPID_state[axis] = (int32_t)gyroRate;
 #endif
     GET_PID_LUX_FLOAT_CORE_LOCALS(axis);
     // -----calculate total PID output

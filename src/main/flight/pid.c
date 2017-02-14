@@ -51,7 +51,7 @@
 int16_t axisPID[3];
 
 #ifdef BLACKBOX
-int32_t axisPID_P[3], axisPID_I[3], axisPID_D[3];
+int32_t axisPID_P[3], axisPID_I[3], axisPID_D[3], axisPID_setpoint[3], axisPID_state[3];
 #endif
 
 // PIDweight is a scale factor for PIDs which is derived from the throttle and TPA setting, and 100 = 100% scale means no PID reduction

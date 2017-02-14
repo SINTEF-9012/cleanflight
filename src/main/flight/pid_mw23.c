@@ -170,6 +170,8 @@ void pidMultiWii23(const pidProfile_t *pidProfile, const controlRateConfig_t *co
         axisPID_P[axis] = PTerm;
         axisPID_I[axis] = ITerm;
         axisPID_D[axis] = DTerm;
+        axisPID_setpoint[axis] = rc;
+        axisPID_state[axis] = gyroError;
 #endif
     }
 
@@ -205,6 +207,8 @@ void pidMultiWii23(const pidProfile_t *pidProfile, const controlRateConfig_t *co
     axisPID_P[FD_YAW] = PTerm;
     axisPID_I[FD_YAW] = ITerm;
     axisPID_D[FD_YAW] = 0;
+    axisPID_setpoint[axis] = rc;
+    axisPID_state[axis] = gyroADC[FD_YAW] / 4;
 #endif
 }
 

@@ -128,6 +128,8 @@ STATIC_UNIT_TESTED int16_t pidMultiWiiRewriteCore(int axis, const pidProfile_t *
     axisPID_P[axis] = PTerm;
     axisPID_I[axis] = ITerm;
     axisPID_D[axis] = DTerm;
+    axisPID_setpoint[axis] = angleRate;
+    axisPID_state[axis] = gyroRate;
 #endif
     GET_PID_MULTI_WII_REWRITE_CORE_LOCALS(axis);
     // -----calculate total PID output

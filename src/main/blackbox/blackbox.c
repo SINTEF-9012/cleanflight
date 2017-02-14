@@ -52,6 +52,7 @@
 
 #include "io/gps.h"
 
+#include "rx/rx.h"
 
 #include "flight/mixer.h"
 #include "flight/servos.h"
@@ -172,59 +173,42 @@ static const blackboxDeltaFieldDefinition_t blackboxMainFields[] = {
     {"loopIteration",-1, UNSIGNED, .Ipredict = PREDICT(0),     .Iencode = ENCODING(UNSIGNED_VB), .Ppredict = PREDICT(INC),           .Pencode = FLIGHT_LOG_FIELD_ENCODING_NULL, CONDITION(ALWAYS)},
     /* Time advances pretty steadily so the P-frame prediction is a straight line */
     {"time",       -1, UNSIGNED, .Ipredict = PREDICT(0),       .Iencode = ENCODING(UNSIGNED_VB), .Ppredict = PREDICT(STRAIGHT_LINE), .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"axisP",       0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"axisP",       1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"axisP",       2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    /* I terms get special packed encoding in P frames: */
-    {"axisI",       0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG2_3S32), CONDITION(ALWAYS)},
-    {"axisI",       1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG2_3S32), CONDITION(ALWAYS)},
-    {"axisI",       2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG2_3S32), CONDITION(ALWAYS)},
-    {"axisD",       0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(NONZERO_PID_D_0)},
-    {"axisD",       1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(NONZERO_PID_D_1)},
-    {"axisD",       2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(NONZERO_PID_D_2)},
-    /* rcCommands are encoded together as a group in P-frames: */
+	/* Setpoints and states for PIDs */
+	{"axisSP",       0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+	{"axisSP",       1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+	{"axisSP",       2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+	{"axisST",       0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+	{"axisST",       1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+	{"axisST",       2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+	/* PID outputs */
+    {"axisU",       0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+    {"axisU",       1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+    {"axisU",       2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+    /* Gyros and accelerometers base their P-predictions on the average of the previous 2 frames to reduce noise impact */
+    {"gyro",   0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+    {"gyro",   1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+    {"gyro",   2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+    {"acc",  0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+    {"acc",  1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+    {"acc",  2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
+	/* RC sticks */
     {"rcCommand",   0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), CONDITION(ALWAYS)},
     {"rcCommand",   1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), CONDITION(ALWAYS)},
     {"rcCommand",   2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), CONDITION(ALWAYS)},
-    /* Throttle is always in the range [minthrottle..maxthrottle]: */
     {"rcCommand",   3, UNSIGNED, .Ipredict = PREDICT(MINTHROTTLE), .Iencode = ENCODING(UNSIGNED_VB), .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG8_4S16), CONDITION(ALWAYS)},
+	{"rcCommand",   4, UNSIGNED, .Ipredict = PREDICT(1500), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG2_3S32), CONDITION(ALWAYS)},
+	{"rcCommand",   5, UNSIGNED, .Ipredict = PREDICT(1500), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG2_3S32), CONDITION(ALWAYS)},
+	{"rcCommand",   6, UNSIGNED, .Ipredict = PREDICT(1500), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG2_3S32), CONDITION(ALWAYS)},
+	/* Motors */
+	{"motor",      0, UNSIGNED, .Ipredict = PREDICT(MINTHROTTLE), .Iencode = ENCODING(UNSIGNED_VB), .Ppredict = PREDICT(AVERAGE_2), .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_1)},
+	{"motor",      1, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_2)},
+	{"motor",      2, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_3)},
+	{"motor",      3, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_4)},
+	/* Attitude */
+	{"attitude",   0, SIGNED, .Ipredict = PREDICT(0), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG2_3S32), CONDITION(ALWAYS)},
+	{"attitude",   1, SIGNED, .Ipredict = PREDICT(0), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG2_3S32), CONDITION(ALWAYS)},
+	{"attitude",   2, SIGNED, .Ipredict = PREDICT(0), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG2_3S32), CONDITION(ALWAYS)},
 
-    {"vbatLatest",    -1, UNSIGNED, .Ipredict = PREDICT(VBATREF),  .Iencode = ENCODING(NEG_14BIT),   .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG8_8SVB), FLIGHT_LOG_FIELD_CONDITION_VBAT},
-    {"amperageLatest",-1, UNSIGNED, .Ipredict = PREDICT(0),        .Iencode = ENCODING(UNSIGNED_VB), .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG8_8SVB), FLIGHT_LOG_FIELD_CONDITION_AMPERAGE_ADC},
-
-#ifdef MAG
-    {"magADC",      0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_8SVB), FLIGHT_LOG_FIELD_CONDITION_MAG},
-    {"magADC",      1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_8SVB), FLIGHT_LOG_FIELD_CONDITION_MAG},
-    {"magADC",      2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_8SVB), FLIGHT_LOG_FIELD_CONDITION_MAG},
-#endif
-#ifdef BARO
-    {"BaroAlt",    -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_8SVB), FLIGHT_LOG_FIELD_CONDITION_BARO},
-#endif
-#ifdef SONAR
-    {"sonarRaw",   -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_8SVB), FLIGHT_LOG_FIELD_CONDITION_SONAR},
-#endif
-    {"rssi",       -1, UNSIGNED, .Ipredict = PREDICT(0),       .Iencode = ENCODING(UNSIGNED_VB), .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_8SVB), FLIGHT_LOG_FIELD_CONDITION_RSSI},
-
-    /* Gyros and accelerometers base their P-predictions on the average of the previous 2 frames to reduce noise impact */
-    {"gyroADC",   0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"gyroADC",   1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"gyroADC",   2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"accSmooth",  0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"accSmooth",  1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    {"accSmooth",  2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(ALWAYS)},
-    /* Motors only rarely drops under minthrottle (when stick falls below mincommand), so predict minthrottle for it and use *unsigned* encoding (which is large for negative numbers but more compact for positive ones): */
-    {"motor",      0, UNSIGNED, .Ipredict = PREDICT(MINTHROTTLE), .Iencode = ENCODING(UNSIGNED_VB), .Ppredict = PREDICT(AVERAGE_2), .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_1)},
-    /* Subsequent motors base their I-frame values on the first one, P-frame values on the average of last two frames: */
-    {"motor",      1, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_2)},
-    {"motor",      2, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_3)},
-    {"motor",      3, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_4)},
-    {"motor",      4, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_5)},
-    {"motor",      5, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_6)},
-    {"motor",      6, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_7)},
-    {"motor",      7, UNSIGNED, .Ipredict = PREDICT(MOTOR_0), .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), CONDITION(AT_LEAST_MOTORS_8)},
-
-    /* Tricopter tail servo */
-    {"servo",      5, UNSIGNED, .Ipredict = PREDICT(1500),    .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(TRICOPTER)}
 };
 
 #ifdef GPS
@@ -277,27 +261,17 @@ typedef enum BlackboxState {
 typedef struct blackboxMainState_s {
     uint32_t time;
 
-    int32_t axisPID_P[XYZ_AXIS_COUNT], axisPID_I[XYZ_AXIS_COUNT], axisPID_D[XYZ_AXIS_COUNT];
+    int32_t axisPID_setpoint[XYZ_AXIS_COUNT], axisPID_state[XYZ_AXIS_COUNT];
+    int16_t axisPID[XYZ_AXIS_COUNT];
 
-    int16_t rcCommand[4];
-    int16_t gyroADC[XYZ_AXIS_COUNT];
-    int16_t accSmooth[XYZ_AXIS_COUNT];
-    int16_t motor[MAX_SUPPORTED_MOTORS];
-    int16_t servo[MAX_SUPPORTED_SERVOS];
+    int16_t gyro[XYZ_AXIS_COUNT], acc[XYZ_AXIS_COUNT];
 
-    uint16_t vbatLatest;
-    uint16_t amperageLatest;
+    int16_t rcCommand[7];
 
-#ifdef BARO
-    int32_t BaroAlt;
-#endif
-#ifdef MAG
-    int16_t magADC[XYZ_AXIS_COUNT];
-#endif
-#ifdef SONAR
-    int32_t sonarRaw;
-#endif
-    uint16_t rssi;
+    int16_t motor[4];
+
+    int16_t attitude[3];
+
 } blackboxMainState_t;
 
 typedef struct blackboxGpsState_s {
@@ -498,84 +472,38 @@ static void blackboxSetState(BlackboxState newState)
 static void writeIntraframe(void)
 {
     blackboxMainState_t *blackboxCurrent = blackboxHistory[0];
-    int x;
 
     blackboxWrite('I');
 
     blackboxWriteUnsignedVB(blackboxIteration);
     blackboxWriteUnsignedVB(blackboxCurrent->time);
 
-    blackboxWriteSignedVBArray(blackboxCurrent->axisPID_P, XYZ_AXIS_COUNT);
-    blackboxWriteSignedVBArray(blackboxCurrent->axisPID_I, XYZ_AXIS_COUNT);
+    // Setpoints, states, and outputs
+    blackboxWriteSignedVBArray(blackboxCurrent->axisPID_setpoint, XYZ_AXIS_COUNT);
+    blackboxWriteSignedVBArray(blackboxCurrent->axisPID_state, XYZ_AXIS_COUNT);
+    blackboxWriteSigned16VBArray(blackboxCurrent->axisPID, XYZ_AXIS_COUNT);
 
-    // Don't bother writing the current D term if the corresponding PID setting is zero
-    for (x = 0; x < XYZ_AXIS_COUNT; x++) {
-        if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_NONZERO_PID_D_0 + x)) {
-            blackboxWriteSignedVB(blackboxCurrent->axisPID_D[x]);
-        }
-    }
+    // Gyro and Acc
+    blackboxWriteSigned16VBArray(blackboxCurrent->gyro, XYZ_AXIS_COUNT);
+    blackboxWriteSigned16VBArray(blackboxCurrent->acc, XYZ_AXIS_COUNT);
 
-    // Write roll, pitch and yaw first:
+    // RC sticks
     blackboxWriteSigned16VBArray(blackboxCurrent->rcCommand, 3);
-
-    /*
-     * Write the throttle separately from the rest of the RC data so we can apply a predictor to it.
-     * Throttle lies in range [minthrottle..maxthrottle]:
-     */
     blackboxWriteUnsignedVB(blackboxCurrent->rcCommand[THROTTLE] - motorAndServoConfig()->minthrottle);
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[4]-1500);
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[5]-1500);
+    blackboxWriteSignedVB(blackboxCurrent->rcCommand[6]-1500);
 
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_VBAT)) {
-        /*
-         * Our voltage is expected to decrease over the course of the flight, so store our difference from
-         * the reference:
-         *
-         * Write 14 bits even if the number is negative (which would otherwise result in 32 bits)
-         */
-        blackboxWriteUnsignedVB((vbatReference - blackboxCurrent->vbatLatest) & 0x3FFF);
-    }
-
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_AMPERAGE_ADC)) {
-        // 12bit value directly from ADC
-        blackboxWriteUnsignedVB(blackboxCurrent->amperageLatest);
-    }
-
-#ifdef MAG
-        if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_MAG)) {
-            blackboxWriteSigned16VBArray(blackboxCurrent->magADC, XYZ_AXIS_COUNT);
-        }
-#endif
-
-#ifdef BARO
-        if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_BARO)) {
-            blackboxWriteSignedVB(blackboxCurrent->BaroAlt);
-        }
-#endif
-
-#ifdef SONAR
-        if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_SONAR)) {
-            blackboxWriteSignedVB(blackboxCurrent->sonarRaw);
-        }
-#endif
-
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_RSSI)) {
-        blackboxWriteUnsignedVB(blackboxCurrent->rssi);
-    }
-
-    blackboxWriteSigned16VBArray(blackboxCurrent->gyroADC, XYZ_AXIS_COUNT);
-    blackboxWriteSigned16VBArray(blackboxCurrent->accSmooth, XYZ_AXIS_COUNT);
-
-    //Motors can be below minthrottle when disarmed, but that doesn't happen much
+    // Motors
     blackboxWriteUnsignedVB(blackboxCurrent->motor[0] - motorAndServoConfig()->minthrottle);
+    blackboxWriteSignedVB(blackboxCurrent->motor[1] - blackboxCurrent->motor[0]);
+    blackboxWriteSignedVB(blackboxCurrent->motor[2] - blackboxCurrent->motor[0]);
+    blackboxWriteSignedVB(blackboxCurrent->motor[3] - blackboxCurrent->motor[0]);
 
-    //Motors tend to be similar to each other so use the first motor's value as a predictor of the others
-    for (x = 1; x < motorCount; x++) {
-        blackboxWriteSignedVB(blackboxCurrent->motor[x] - blackboxCurrent->motor[0]);
-    }
+    // Attitude
+    blackboxWriteSigned16VBArray(blackboxCurrent->attitude, 3);
 
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_TRICOPTER)) {
-        //Assume the tail spends most of its time around the center
-        blackboxWriteSignedVB(blackboxCurrent->servo[5] - 1500);
-    }
+
 
     //Rotate our history buffers:
 
@@ -607,6 +535,7 @@ static void writeInterframe(void)
 {
     int x;
     int32_t deltas[8];
+    int16_t deltas16[8];
 
     blackboxMainState_t *blackboxCurrent = blackboxHistory[0];
     blackboxMainState_t *blackboxLast = blackboxHistory[1];
@@ -621,81 +550,44 @@ static void writeInterframe(void)
      */
     blackboxWriteSignedVB((int32_t) (blackboxHistory[0]->time - 2 * blackboxHistory[1]->time + blackboxHistory[2]->time));
 
-    arraySubInt32(deltas, blackboxCurrent->axisPID_P, blackboxLast->axisPID_P, XYZ_AXIS_COUNT);
+    
+    /* Setpoints and states */
+    arraySubInt32(deltas, blackboxCurrent->axisPID_setpoint, blackboxLast->axisPID_setpoint, XYZ_AXIS_COUNT);
     blackboxWriteSignedVBArray(deltas, XYZ_AXIS_COUNT);
 
-    /* 
-     * The PID I field changes very slowly, most of the time +-2, so use an encoding
-     * that can pack all three fields into one byte in that situation.
-     */
-    arraySubInt32(deltas, blackboxCurrent->axisPID_I, blackboxLast->axisPID_I, XYZ_AXIS_COUNT);
-    blackboxWriteTag2_3S32(deltas);
-    
-    /*
-     * The PID D term is frequently set to zero for yaw, which makes the result from the calculation
-     * always zero. So don't bother recording D results when PID D terms are zero.
-     */
-    for (x = 0; x < XYZ_AXIS_COUNT; x++) {
-        if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_NONZERO_PID_D_0 + x)) {
-            blackboxWriteSignedVB(blackboxCurrent->axisPID_D[x] - blackboxLast->axisPID_D[x]);
-        }
-    }
+    arraySubInt32(deltas, blackboxCurrent->axisPID_state, blackboxLast->axisPID_state, XYZ_AXIS_COUNT);
+	blackboxWriteSignedVBArray(deltas, XYZ_AXIS_COUNT);
 
-    /*
-     * RC tends to stay the same or fairly small for many frames at a time, so use an encoding that
-     * can pack multiple values per byte:
-     */
+	/* Outputs */
+	arraySubInt16(deltas16, blackboxCurrent->axisPID, blackboxLast->axisPID, XYZ_AXIS_COUNT);
+	blackboxWriteSigned16VBArray(deltas16, XYZ_AXIS_COUNT);
+
+
+	/* Gyros and Accs */
+    //Since gyros, accs and motors are noisy, base their predictions on the average of the history:
+    blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, gyro),   XYZ_AXIS_COUNT);
+    blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, acc), XYZ_AXIS_COUNT);
+
+    /* RC Sticks */
     for (x = 0; x < 4; x++) {
         deltas[x] = blackboxCurrent->rcCommand[x] - blackboxLast->rcCommand[x];
     }
-
     blackboxWriteTag8_4S16(deltas);
-
-    //Check for sensors that are updated periodically (so deltas are normally zero)
-    int optionalFieldCount = 0;
-
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_VBAT)) {
-        deltas[optionalFieldCount++] = (int32_t) blackboxCurrent->vbatLatest - blackboxLast->vbatLatest;
+    for (x = 0; x < 3; x++) {
+    	deltas[x] = blackboxCurrent->rcCommand[x+4] - blackboxLast->rcCommand[x+4];
     }
+    blackboxWriteTag2_3S32(deltas);
 
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_AMPERAGE_ADC)) {
-        deltas[optionalFieldCount++] = (int32_t) blackboxCurrent->amperageLatest - blackboxLast->amperageLatest;
+    /* Motors */
+    blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, motor), 4);
+
+    /* Attitude */
+    for (x = 0; x < 3; x++) {
+    	deltas[x] = blackboxCurrent->attitude[x] - blackboxLast->attitude[x];
     }
+    blackboxWriteTag2_3S32(deltas);
 
-#ifdef MAG
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_MAG)) {
-        for (x = 0; x < XYZ_AXIS_COUNT; x++) {
-            deltas[optionalFieldCount++] = blackboxCurrent->magADC[x] - blackboxLast->magADC[x];
-        }
-    }
-#endif
 
-#ifdef BARO
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_BARO)) {
-        deltas[optionalFieldCount++] = blackboxCurrent->BaroAlt - blackboxLast->BaroAlt;
-    }
-#endif
-
-#ifdef SONAR
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_SONAR)) {
-        deltas[optionalFieldCount++] = blackboxCurrent->sonarRaw - blackboxLast->sonarRaw;
-    }
-#endif
-
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_RSSI)) {
-        deltas[optionalFieldCount++] = (int32_t) blackboxCurrent->rssi - blackboxLast->rssi;
-    }
-
-    blackboxWriteTag8_8SVB(deltas, optionalFieldCount);
-
-    //Since gyros, accs and motors are noisy, base their predictions on the average of the history:
-    blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, gyroADC),   XYZ_AXIS_COUNT);
-    blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, accSmooth), XYZ_AXIS_COUNT);
-    blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, motor),     motorCount);
-
-    if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_TRICOPTER)) {
-        blackboxWriteSignedVB(blackboxCurrent->servo[5] - blackboxLast->servo[5]);
-    }
 
     //Rotate our history buffers
     blackboxHistory[2] = blackboxHistory[1];
@@ -934,55 +826,24 @@ static void loadMainState(void)
     blackboxCurrent->time = currentTime;
 
     for (i = 0; i < XYZ_AXIS_COUNT; i++) {
-        blackboxCurrent->axisPID_P[i] = axisPID_P[i];
-    }
-    for (i = 0; i < XYZ_AXIS_COUNT; i++) {
-        blackboxCurrent->axisPID_I[i] = axisPID_I[i];
-    }
-    for (i = 0; i < XYZ_AXIS_COUNT; i++) {
-        blackboxCurrent->axisPID_D[i] = axisPID_D[i];
-    }
+		blackboxCurrent->axisPID_setpoint[i] = axisPID_setpoint[i];
+		blackboxCurrent->axisPID_state[i] = axisPID_state[i];
+		blackboxCurrent->axisPID[i] = axisPID[i];
+
+		blackboxCurrent->gyro[i] = gyroADC[i];
+		blackboxCurrent->acc[i] = accADC[i];
+
+		blackboxCurrent->attitude[i] = attitude.raw[i];
+	}
 
     for (i = 0; i < 4; i++) {
-        blackboxCurrent->rcCommand[i] = rcCommand[i];
+    	blackboxCurrent->motor[i] = motor[i];
+    	blackboxCurrent->rcCommand[i] = rcCommand[i];
     }
 
-    for (i = 0; i < XYZ_AXIS_COUNT; i++) {
-        blackboxCurrent->gyroADC[i] = gyroADC[i];
-    }
-
-    for (i = 0; i < XYZ_AXIS_COUNT; i++) {
-        blackboxCurrent->accSmooth[i] = accSmooth[i];
-    }
-
-    for (i = 0; i < motorCount; i++) {
-        blackboxCurrent->motor[i] = motor[i];
-    }
-
-    blackboxCurrent->vbatLatest = vbatLatestADC;
-    blackboxCurrent->amperageLatest = amperageLatestADC;
-
-#ifdef MAG
-    for (i = 0; i < XYZ_AXIS_COUNT; i++) {
-        blackboxCurrent->magADC[i] = magADC[i];
-    }
-#endif
-
-#ifdef BARO
-    blackboxCurrent->BaroAlt = BaroAlt;
-#endif
-
-#ifdef SONAR
-    // Store the raw sonar value without applying tilt correction
-    blackboxCurrent->sonarRaw = sonarRead();
-#endif
-
-    blackboxCurrent->rssi = rssi;
-
-#ifdef USE_SERVOS
-    //Tail servo for tricopters
-    blackboxCurrent->servo[5] = servo[5];
-#endif
+    for (i = 4; i < 7; i++) {
+    	blackboxCurrent->rcCommand[i] = rcData[i];
+	}
 }
 
 /**
