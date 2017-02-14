@@ -8,7 +8,17 @@ The sonar sensor is only used when the aircraft inclination angle (attitude) is 
 
 ## Hardware
 
-Currently the only supported sensor is the HCSR04 sensor.
+Currently the main supported sensor is the HCSR04 sensor.
+The Parallax 28015 single-wire sonar can also be used by connecting 1k resistors to the Trigger and Echo pins, and the other end of the resistors shorted together and to the Sonar module.
+
+```
+          1k
+TRIGGER--/\/\--\
+                \_______ 28015 SONAR
+          1k    /
+ECHO-----/\/\--/
+```
+
 
 ## Connections
 
@@ -22,16 +32,6 @@ Currently the only supported sensor is the HCSR04 sensor.
 #### Constraints
 
 Current meter cannot be used in conjunction with Parallel PWM and Sonar.
-
-### Olimexino
-
-| Trigger       | Echo          | Inline 1k resistors |
-| ------------- | ------------- | ------------------- |
-| PB0 / RC7     | PB1 / RC8     | YES (3.3v input)    |
-
-#### Constraints
-
-Current meter cannot be used in conjunction with Sonar.
 
 ### CC3D
 

@@ -21,7 +21,7 @@
 #define PG_GIMBAL_CONFIG 3
 #define PG_MOTOR_MIXER 4
 #define PG_BLACKBOX_CONFIG 5
-#define PG_MOTOR_AND_SERVO_CONFIG 6
+#define PG_MOTOR_CONFIG 6
 #define PG_SENSOR_SELECTION_CONFIG 7
 #define PG_SENSOR_ALIGNMENT_CONFIG 8
 #define PG_SENSOR_TRIMS 9
@@ -62,11 +62,27 @@
 #define PG_CHANNEL_RANGE_CONFIG 44
 #define PG_MODE_COLOR_CONFIG 45
 #define PG_SPECIAL_COLOR_CONFIG 46
+#define PG_PILOT_CONFIG 47
+#define PG_MSP_SERVER_CONFIG 48
+#define PG_VOLTAGE_METER_CONFIG 49
+#define PG_AMPERAGE_METER_CONFIG 50
+#define PG_DEBUG_CONFIG 51
+#define PG_SERVO_CONFIG 52
+#define PG_IBUS_TELEMETRY_CONFIG 53
+#define PG_VTX_CONFIG 54
 
 // Driver configuration
 #define PG_DRIVER_PWM_RX_CONFIG 100
+#define PG_DRIVER_FLASHCHIP_CONFIG 101
 
-#define PG_RESERVED_FOR_TESTING_1 65533
-#define PG_RESERVED_FOR_TESTING_2 65534
-#define PG_RESERVED_FOR_TESTING_3 65535
+// OSD configuration (subject to change)
+#define PG_OSD_FONT_CONFIG 2047
+#define PG_OSD_VIDEO_CONFIG 2046
+#define PG_OSD_ELEMENT_CONFIG 2045
+
+
+// 4095 is currently the highest number that can be used for a PGN due to the top 4 bits of the 16 bit value being reserved for the version when the PG is stored in an EEPROM.
+#define PG_RESERVED_FOR_TESTING_1 4095
+#define PG_RESERVED_FOR_TESTING_2 4094
+#define PG_RESERVED_FOR_TESTING_3 4093
 

@@ -25,14 +25,15 @@
 
 extern "C" {
     #include <platform.h>
-    #include "build_config.h"
-    #include "debug.h"
+    #include "build/build_config.h"
+    #include "build/debug.h"
 
     #include "common/axis.h"
     #include "common/maths.h"
 
     #include "config/parameter_group.h"
     #include "config/parameter_group_ids.h"
+    #include "config/profile.h"
 
     #include "sensors/sensors.h"
 
@@ -45,15 +46,14 @@ extern "C" {
     #include "sensors/acceleration.h"
     #include "sensors/barometer.h"
 
-    #include "config/runtime_config.h"
-    #include "config/config.h"
+    #include "fc/runtime_config.h"
 
-    #include "io/motor_and_servo.h"
-    #include "io/rc_controls.h"
+    #include "io/motors.h"
+    #include "fc/rc_controls.h"
 
     #include "rx/rx.h"
 
-    #include "io/rc_controls.h"
+    #include "fc/rc_controls.h"
 
     #include "flight/mixer.h"
     #include "flight/pid.h"
@@ -63,7 +63,7 @@ extern "C" {
     PG_REGISTER_PROFILE(rcControlsConfig_t, rcControlsConfig, PG_RC_CONTROLS_CONFIG, 0);
     PG_REGISTER_PROFILE(barometerConfig_t, barometerConfig, PG_BAROMETER_CONFIG, 0);
     PG_REGISTER_PROFILE(compassConfig_t, compassConfig, PG_COMPASS_CONFIGURATION, 0);
-    PG_REGISTER(motorAndServoConfig_t, motorAndServoConfig, PG_MOTOR_AND_SERVO_CONFIG, 0);
+    PG_REGISTER(motorConfig_t, motorConfig, PG_MOTOR_CONFIG, 0);
 
 }
 
@@ -168,7 +168,7 @@ uint8_t armingFlags;
 int32_t sonarAlt;
 int16_t sonarCfAltCm;
 int16_t sonarMaxAltWithTiltCm;
-int32_t accADC[XYZ_AXIS_COUNT];
+int32_t accSmooth[XYZ_AXIS_COUNT];
 int32_t gyroADC[XYZ_AXIS_COUNT];
 
 int16_t GPS_speed;

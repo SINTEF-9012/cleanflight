@@ -21,47 +21,47 @@
 
 #include <string.h>
 
-#include "build_config.h"
+#include "build/build_config.h"
 
 #include <platform.h>
 
-#include "config/config.h"
 #include "config/parameter_group.h"
+#include "config/feature.h"
 
 #include "drivers/gpio.h"
 #include "drivers/timer.h"
 #include "drivers/pwm_rx.h"
 
-#include "config/config.h"
-#include "config/parameter_group.h"
-#include "config/feature.h"
+#include "fc/config.h"
 
 #include "rx/rx.h"
 #include "rx/pwm.h"
 
-static uint16_t pwmReadRawRC(rxRuntimeConfig_t *rxRuntimeConfigPtr, uint8_t channel)
+static uint16_t pwmReadRawRC(const rxRuntimeConfig_t *rxRuntimeConfigPtr, uint8_t channel)
 {
     UNUSED(rxRuntimeConfigPtr);
     return pwmRead(channel);
 }
 
-static uint16_t ppmReadRawRC(rxRuntimeConfig_t *rxRuntimeConfigPtr, uint8_t channel)
+static uint16_t ppmReadRawRC(const rxRuntimeConfig_t *rxRuntimeConfigPtr, uint8_t channel)
 {
     UNUSED(rxRuntimeConfigPtr);
     return ppmRead(channel);
 }
 
-void rxPwmInit(rxRuntimeConfig_t *rxRuntimeConfigPtr, rcReadRawDataPtr *callback)
+void rxPwmInit(const rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig)
 {
-    UNUSED(rxRuntimeConfigPtr);
-    // configure PWM/CPPM read function and max number of channels. serial rx below will override both of these, if enabled
+    UNUSED(rxConfig);
+
+    rxRuntimeConfig->rxRefreshRate = 20000;
+
+    // configure PWM/CPPM read function and max number of channels
     if (feature(FEATURE_RX_PARALLEL_PWM)) {
-        rxRuntimeConfigPtr->channelCount = MAX_SUPPORTED_RC_PARALLEL_PWM_CHANNEL_COUNT;
-        *callback = pwmReadRawRC;
-    }
-    if (feature(FEATURE_RX_PPM)) {
-        rxRuntimeConfigPtr->channelCount = MAX_SUPPORTED_RC_PPM_CHANNEL_COUNT;
-        *callback = ppmReadRawRC;
+        rxRuntimeConfig->channelCount = MAX_SUPPORTED_RC_PARALLEL_PWM_CHANNEL_COUNT;
+        rxRuntimeConfig->rcReadRawFn = pwmReadRawRC;
+    } else if (feature(FEATURE_RX_PPM)) {
+        rxRuntimeConfig->channelCount = MAX_SUPPORTED_RC_PPM_CHANNEL_COUNT;
+        rxRuntimeConfig->rcReadRawFn = ppmReadRawRC;
     }
 }
 

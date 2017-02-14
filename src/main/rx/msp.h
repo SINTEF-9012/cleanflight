@@ -17,9 +17,9 @@
 
 #pragma once
 
-bool rxMspFrameComplete(void);
+uint8_t rxMspFrameStatus(void);
 void rxMspFrameReceive(uint16_t *frame, int channelCount);
-void rxMspInit(rxRuntimeConfig_t *rxRuntimeConfig, rcReadRawDataPtr *callback);
+void rxMspInit(const rxConfig_t *initialRxConfig, rxRuntimeConfig_t *rxRuntimeConfig);
 
 // SINTEF JAKOB - Is this the best place to put this?
 void rxMspOffsetFrameReceive(int16_t *frame, int channelCount);

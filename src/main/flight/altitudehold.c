@@ -24,12 +24,11 @@
 
 #include <platform.h>
 
-#include "debug.h"
+#include "build/debug.h"
 
 #include "common/maths.h"
 #include "common/axis.h"
 
-#include "config/runtime_config.h"
 #include "config/parameter_group.h"
 #include "config/parameter_group_ids.h"
 
@@ -44,8 +43,10 @@
 
 #include "rx/rx.h"
 
-#include "io/rc_controls.h"
-#include "io/motor_and_servo.h"
+#include "io/motors.h"
+
+#include "fc/rc_controls.h"
+#include "fc/runtime_config.h"
 
 #include "flight/mixer.h"
 #include "flight/pid.h"
@@ -93,7 +94,7 @@ static void applyMultirotorAltHold(void)
                 AltHold = EstAlt;
                 isAltHoldChanged = 0;
             }
-            rcCommand[THROTTLE] = constrain(initialThrottleHold + altHoldThrottleAdjustment, motorAndServoConfig()->minthrottle, motorAndServoConfig()->maxthrottle);
+            rcCommand[THROTTLE] = constrain(initialThrottleHold + altHoldThrottleAdjustment, motorConfig()->minthrottle, motorConfig()->maxthrottle);
         }
     } else {
         // slow alt changes, mostly used for aerial photography
@@ -107,7 +108,7 @@ static void applyMultirotorAltHold(void)
             velocityControl = 0;
             isAltHoldChanged = 0;
         }
-        rcCommand[THROTTLE] = constrain(initialThrottleHold + altHoldThrottleAdjustment, motorAndServoConfig()->minthrottle, motorAndServoConfig()->maxthrottle);
+        rcCommand[THROTTLE] = constrain(initialThrottleHold + altHoldThrottleAdjustment, motorConfig()->minthrottle, motorConfig()->maxthrottle);
     }
 }
 
@@ -274,7 +275,9 @@ void calculateEstimatedAltitude(uint32_t currentTime)
 
     // Integrator - Altitude in cm
     accAlt += (vel_acc * 0.5f) * dt + vel * dt;                                                                 // integrate velocity to get distance (x= a/2 * t^2)
+#ifdef BARO
     accAlt = accAlt * barometerConfig()->baro_cf_alt + (float)BaroAlt * (1.0f - barometerConfig()->baro_cf_alt);    // complementary filter for altitude estimation (baro & acc)
+#endif
     vel += vel_acc;
 
 #ifdef DEBUG_ALT_HOLD
@@ -310,7 +313,9 @@ void calculateEstimatedAltitude(uint32_t currentTime)
 
     // apply Complimentary Filter to keep the calculated velocity based on baro velocity (i.e. near real velocity).
     // By using CF it's possible to correct the drift of integrated accZ (velocity) without loosing the phase, i.e without delay
+#ifdef BARO
     vel = vel * barometerConfig()->baro_cf_vel + baroVel * (1.0f - barometerConfig()->baro_cf_vel);
+#endif
     vel_tmp = lrintf(vel);
 
     // set vario

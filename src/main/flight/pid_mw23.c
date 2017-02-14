@@ -22,16 +22,15 @@
 
 #include <platform.h>
 
-#include "build_config.h"
+#include "build/build_config.h"
 
-#ifndef SKIP_PID_MW23
+#ifdef USE_PID_MW23
 
 #include "common/axis.h"
 #include "common/maths.h"
 #include "common/filter.h"
 
 #include "config/parameter_group.h"
-#include "config/runtime_config.h"
 #include "config/config_unittest.h"
 
 #include "drivers/sensor.h"
@@ -44,8 +43,9 @@
 
 #include "rx/rx.h"
 
-#include "io/rc_controls.h"
-#include "io/rate_profile.h"
+#include "fc/rc_controls.h"
+#include "fc/rate_profile.h"
+#include "fc/runtime_config.h"
 
 #include "flight/pid.h"
 #include "flight/imu.h"
@@ -64,7 +64,7 @@ extern int32_t axisPID_P[3], axisPID_I[3], axisPID_D[3];
 #endif
 extern int32_t lastITerm[3], ITermLimit[3];
 
-extern biquad_t deltaFilterState[3];
+extern pt1Filter_t deltaFilter[3];
 
 
 void pidResetITermAngle(void)
@@ -83,8 +83,6 @@ void pidMultiWii23(const pidProfile_t *pidProfile, const controlRateConfig_t *co
     int32_t PTerm, ITerm, PTermACC, ITermACC, DTerm;
     static int16_t lastErrorForDelta[2];
     static int32_t delta1[2], delta2[2];
-
-    pidFilterIsSetCheck(pidProfile);
 
     if (FLIGHT_MODE(HORIZON_MODE)) {
         prop = MIN(MAX(ABS(rcCommand[PITCH]), ABS(rcCommand[ROLL])), 512);
@@ -146,10 +144,10 @@ void pidMultiWii23(const pidProfile_t *pidProfile, const controlRateConfig_t *co
         // Delta from measurement
         delta = -(gyroError - lastErrorForDelta[axis]);
         lastErrorForDelta[axis] = gyroError;
-        if (pidProfile->dterm_cut_hz) {
+        if (pidProfile->dterm_lpf_hz) {
             // Dterm delta low pass
             DTerm = delta;
-            DTerm = lrintf(applyBiQuadFilter((float) DTerm, &deltaFilterState[axis])) * 3;  // Keep same scaling as unfiltered DTerm
+            DTerm = lrintf(pt1FilterApply4(&deltaFilter[axis], (float)DTerm, pidProfile->dterm_lpf_hz, getdT())) * 3;  // Keep same scaling as unfiltered DTerm
         } else {
             // When dterm filter disabled apply moving average to reduce noise
             DTerm  = delta1[axis] + delta2[axis] + delta;
@@ -213,4 +211,3 @@ void pidMultiWii23(const pidProfile_t *pidProfile, const controlRateConfig_t *co
 }
 
 #endif
-

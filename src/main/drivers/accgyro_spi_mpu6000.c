@@ -30,6 +30,7 @@
 
 #include "common/axis.h"
 #include "common/maths.h"
+#include "common/time.h"
 
 #include "system.h"
 #include "gpio.h"
@@ -44,10 +45,9 @@
 
 static void mpu6000AccAndGyroInit(void);
 
-extern uint8_t mpuLowPassFilter;
-
 static bool mpuSpi6000InitDone = false;
 
+extern uint8_t mpuIntDenominator;
 // Bits
 #define BIT_SLEEP				    0x40
 #define BIT_H_RESET				    0x80
@@ -121,13 +121,30 @@ bool mpu6000ReadRegister(uint8_t reg, uint8_t length, uint8_t *data)
     return true;
 }
 
-void mpu6000SpiGyroInit(uint8_t lpf)
+void mpu6000SpiGyroInit(gyro_t *gyro, uint8_t lpf)
 {
+    uint16_t intFrequencyHz;
+    switch(lpf) {
+        case 0:
+            intFrequencyHz = 8000;
+        break;
+        default:
+            intFrequencyHz = 1000;
+        break;
+    }
+
+    mpuIntDenominator = intFrequencyHz / gyro->sampleFrequencyHz;
+
+    // handle cases where the refresh period was set lower than the LPF allows
+    if (mpuIntDenominator == 0) {
+        mpuIntDenominator = 1;
+        gyro->sampleFrequencyHz = intFrequencyHz;
+    }
     mpuIntExtiInit();
 
     mpu6000AccAndGyroInit();
 
-    spiSetDivisor(MPU6000_SPI_INSTANCE, SPI_0_5625MHZ_CLOCK_DIVIDER);
+    spiSetDivisor(MPU6000_SPI_INSTANCE, SPI_CLOCK_SLOW);
 
     // Accel and Gyro DLPF Setting
     mpu6000WriteRegister(MPU6000_CONFIG, lpf);
@@ -153,7 +170,7 @@ bool mpu6000SpiDetect(void)
     uint8_t in;
     uint8_t attemptsRemaining = 5;
 
-    spiSetDivisor(MPU6000_SPI_INSTANCE, SPI_0_5625MHZ_CLOCK_DIVIDER);
+    spiSetDivisor(MPU6000_SPI_INSTANCE, SPI_CLOCK_SLOW);
 
     mpu6000WriteRegister(MPU_RA_PWR_MGMT_1, BIT_H_RESET);
 
@@ -194,13 +211,14 @@ bool mpu6000SpiDetect(void)
     return false;
 }
 
-static void mpu6000AccAndGyroInit(void) {
+static void mpu6000AccAndGyroInit(void)
+{
 
     if (mpuSpi6000InitDone) {
         return;
     }
 
-    spiSetDivisor(MPU6000_SPI_INSTANCE, SPI_0_5625MHZ_CLOCK_DIVIDER);
+    spiSetDivisor(MPU6000_SPI_INSTANCE, SPI_CLOCK_SLOW);
 
     // Device Reset
     mpu6000WriteRegister(MPU_RA_PWR_MGMT_1, BIT_H_RESET);
@@ -222,7 +240,7 @@ static void mpu6000AccAndGyroInit(void) {
 
     // Accel Sample Rate 1kHz
     // Gyroscope Output Rate =  1kHz when the DLPF is enabled
-    mpu6000WriteRegister(MPU_RA_SMPLRT_DIV, gyroMPU6xxxCalculateDivider());
+    mpu6000WriteRegister(MPU_RA_SMPLRT_DIV, 0);
     delayMicroseconds(1);
 
     // Gyro +/- 1000 DPS Full Scale
@@ -230,7 +248,7 @@ static void mpu6000AccAndGyroInit(void) {
     delayMicroseconds(1);
 
     // Accel +/- 8 G Full Scale
-    mpu6000WriteRegister(MPU_RA_ACCEL_CONFIG, INV_FSR_8G << 3);
+    mpu6000WriteRegister(MPU_RA_ACCEL_CONFIG, INV_FSR_16G << 3);
     delayMicroseconds(1);
 
 
@@ -242,7 +260,7 @@ static void mpu6000AccAndGyroInit(void) {
     delayMicroseconds(1);
 #endif
 
-    spiSetDivisor(MPU6000_SPI_INSTANCE, SPI_18MHZ_CLOCK_DIVIDER);  // 18 MHz SPI clock
+    spiSetDivisor(MPU6000_SPI_INSTANCE, SPI_CLOCK_FAST);  // 18 MHz SPI clock
 
     mpuSpi6000InitDone = true;
 }
@@ -267,7 +285,6 @@ bool mpu6000SpiGyroDetect(gyro_t *gyro)
 
     gyro->init = mpu6000SpiGyroInit;
     gyro->read = mpuGyroRead;
-    gyro->isDataReady = mpuIsDataReady;
 
     // 16.4 dps/lsb scalefactor
     gyro->scale = 1.0f / 16.4f;

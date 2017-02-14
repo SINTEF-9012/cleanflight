@@ -37,6 +37,8 @@ extern "C" {
 //uint32_t testFeatureMask = 0;
 uint8_t cliMode = 0;
 
+PG_REGISTER(serialConfig_t, serialConfig, PG_SERIAL_CONFIG, 0);
+
 extern uint8_t serialPortCount;
 
 TEST(IoSerialTest, TestSoftSerialPortsEnabled)
@@ -71,7 +73,7 @@ TEST(IoSerialTest, TestFindPortConfig)
     serialInit(true);
 
     // and
-    serialPortConfig_t *portConfig = findSerialPortConfig(FUNCTION_MSP);
+    serialPortConfig_t *portConfig = findSerialPortConfig(FUNCTION_MSP_SERVER);
 
     // then
     EXPECT_EQ(NULL, portConfig);
@@ -81,15 +83,11 @@ TEST(IoSerialTest, TestFindPortConfig)
 // STUBS
 
 extern "C" {
-//
-//bool feature(uint32_t mask) {
-//    return (mask & testFeatureMask);
-//}s
-
 void delay(uint32_t) {}
+uint32_t millis(void) { return 0;}
 void cliEnter(serialPort_t *) {}
 void cliProcess(void) {}
-bool isSerialTransmitBufferEmpty(serialPort_t *) {
+bool isSerialTransmitBufferEmpty(const serialPort_t *) {
     return true;
 }
 void mspSerialProcess(void) {}
@@ -99,4 +97,7 @@ serialPort_t *usbVcpOpen(void) { return NULL; }
 serialPort_t *uartOpen(USART_TypeDef *, serialReceiveCallbackPtr, uint32_t, portMode_t, portOptions_t) { return NULL; }
 serialPort_t *openSoftSerial(softSerialPortIndex_e, serialReceiveCallbackPtr, uint32_t, portOptions_t) { return NULL; }
 void serialSetMode(serialPort_t *, portMode_t) {}
+void serialWrite(serialPort_t *, uint8_t) {}
+uint32_t serialRxBytesWaiting(const serialPort_t *) { return 0; }
+uint8_t serialRead(serialPort_t *) { return 0; }
 }

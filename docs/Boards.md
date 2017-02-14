@@ -6,8 +6,9 @@ If you want a fully featured version of Cleanflight then the recommendation for 
 
 The core set of recommended boards are:
 
-* [Seriously Pro SPRacingF3Mini](Board%20-%20SPRacingF3Mini.md)
+* [Seriously Pro SPRacingF3Mini](Board%20-%20SPRacingF3MINI.md)
 * [Seriously Pro SPRacingF3](Board%20-%20SPRacingF3.md)
+* [Seriously Pro SPRacingF3EVO](Board%20-%20SPRacingF3EVO.md)
 * [TBS Colibri Race](Board%20-%20ColibriRace.md)
 * [AlienFlightF3](Board%20-%20AlienFlight.md)
 * [TauLabs Sparky](Board%20-%20Sparky.md)
@@ -25,12 +26,9 @@ Cleanflight also runs on the following developer boards:
 
 * STM32F3Discovery - Recommended for developers.
 * Port103R - Recommended for F1 developers.
-* EUSTM32F103RB - Legacy.
 
 There is also limited support for the following boards which may be removed due to lack of users or commercial availability.
  
-* [Olimexino](Board%20-%20Olimexino.md)
-* Naze32Pro
 * STM32F3Discovery with Chebuzz F3 shield.
 
 NOTE: Users are advised against purhasing boards that have CPUs with less than 256KB of EEPROM space - available features may be limited.

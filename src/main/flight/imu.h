@@ -21,7 +21,6 @@ extern int16_t throttleAngleCorrection;
 extern uint32_t accTimeSum;
 extern int accSumCount;
 extern float accVelScale;
-extern int16_t accSmooth[XYZ_AXIS_COUNT];
 extern int32_t accSum[XYZ_AXIS_COUNT];
 
 #define DEGREES_TO_DECIDEGREES(angle) (angle * 10)
@@ -43,13 +42,10 @@ extern attitudeEulerAngles_t attitude;
 
 typedef struct imuConfig_s {
     // IMU configuration
-    uint16_t looptime;                      // imu loop time in us
-    uint8_t gyroSync;                       // Enable interrupt based loop
-    uint8_t gyroSyncDenominator;            // Gyro sync Denominator
+    uint16_t max_angle_inclination;         // max inclination allowed in angle (level) mode. default 500 (50 degrees).
+    uint8_t small_angle;                    // Angle used for mag hold threshold.
     uint16_t dcm_kp;                        // DCM filter proportional gain ( x 10000)
     uint16_t dcm_ki;                        // DCM filter integral gain ( x 10000)
-    uint8_t small_angle;                    // Angle used for mag hold threshold.
-    uint16_t max_angle_inclination;         // max inclination allowed in angle (level) mode. default 500 (50 degrees).
 } imuConfig_t;
 
 PG_DECLARE(imuConfig_t, imuConfig);
@@ -79,7 +75,7 @@ void imuConfigure(
 );
 
 void imuUpdateAccelerometer(rollAndPitchTrims_t *accelerometerTrims);
-void imuUpdateGyroAndAttitude(void);
+void imuUpdateAttitude(void);
 float calculateThrottleAngleScale(uint16_t throttle_correction_angle);
 int16_t calculateThrottleAngleCorrection(uint8_t throttle_correction_value);
 float calculateAccZLowPassFilterRCTimeConstant(float accz_lpf_cutoff);

@@ -32,29 +32,28 @@
 
 #include "config/parameter_group.h"
 #include "config/parameter_group_ids.h"
-#include "config/runtime_config.h"
-#include "config/config.h"
 #include "config/feature.h"
 
 #include "drivers/system.h"
 #include "drivers/sensor.h"
 #include "drivers/accgyro.h"
-#include "drivers/gpio.h"
-#include "drivers/timer.h"
 #include "drivers/serial.h"
 
-#include "io/rc_controls.h"
+#include "fc/runtime_config.h"
+#include "fc/config.h"
+#include "fc/rc_controls.h"
+#include "fc/fc_serial.h"
 
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/gyro.h"
 #include "sensors/barometer.h"
+#include "../sensors/amperage.h"
 #include "sensors/battery.h"
 
 #include "io/serial.h"
 #include "io/gps.h"
 
-//#include "flight/mixer.h"
 #include "flight/pid.h"
 #include "flight/imu.h"
 #include "flight/altitudehold.h"
@@ -168,10 +167,12 @@ static void sendAccel(void)
 
 static void sendBaro(void)
 {
+#ifdef BARO
     sendDataHead(ID_ALTITUDE_BP);
     serialize16(BaroAlt / 100);
     sendDataHead(ID_ALTITUDE_AP);
     serialize16(ABS(BaroAlt % 100));
+#endif
 }
 
 #ifdef GPS
@@ -356,6 +357,9 @@ static void sendVario(void)
  */
 static void sendVoltage(void)
 {
+    if (!telemetryConfig()->telemetry_send_cells) {
+        return;
+    }
     static uint16_t currentCell = 0;
     uint32_t cellVoltage;
     uint16_t payload;
@@ -412,18 +416,22 @@ static void sendVoltageAmp(void)
 
 static void sendAmperage(void)
 {
+    amperageMeter_t *state = getAmperageMeter(batteryConfig()->amperageMeterSource);
+
     sendDataHead(ID_CURRENT);
-    serialize16((uint16_t)(amperage / 10));
+    serialize16((uint16_t)(state->amperage / 10));
 }
 
 static void sendFuelLevel(void)
 {
+
     sendDataHead(ID_FUEL_LEVEL);
 
     if (batteryConfig()->batteryCapacity > 0) {
-        serialize16((uint16_t)calculateBatteryCapacityRemainingPercentage());
+        serialize16((uint16_t)batteryCapacityRemainingPercentage());
     } else {
-        serialize16((uint16_t)constrain(mAhDrawn, 0, 0xFFFF));
+        amperageMeter_t *state = getAmperageMeter(batteryConfig()->amperageMeterSource);
+        serialize16((uint16_t)constrain(state->mAhDrawn, 0, 0xFFFF));
     }
 }
 
@@ -467,18 +475,20 @@ bool hasEnoughTimeLapsedSinceLastTelemetryTransmission(uint32_t currentMillis)
     return currentMillis - lastCycleTime >= CYCLETIME;
 }
 
-void checkFrSkyTelemetryState(void)
+bool checkFrSkyTelemetryState(void)
 {
     bool newTelemetryEnabledValue = telemetryDetermineEnabledState(frskyPortSharing);
 
     if (newTelemetryEnabledValue == frskyTelemetryEnabled) {
-        return;
+        return false;
     }
 
     if (newTelemetryEnabledValue)
         configureFrSkyTelemetryPort();
     else
         freeFrSkyTelemetryPort();
+
+    return true;
 }
 
 void handleFrSkyTelemetry(uint16_t deadband3d_throttle)

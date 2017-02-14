@@ -24,6 +24,8 @@
 #define MAG
 #define BARO
 #define GPS
+#define VTX
+#define FC
 #define TELEMETRY
 #define LED_STRIP
 #define USE_SERVOS
@@ -33,6 +35,17 @@
 #define USART3              ((USART_TypeDef *) 3)
 #define UART4              ((USART_TypeDef *) 4)
 #define UART5              ((USART_TypeDef *) 5)
+
+#define NVIC_PriorityGroup_0         ((uint32_t)0x700) /*!< 0 bits for pre-emption priority
+                                                            4 bits for subpriority */
+#define NVIC_PriorityGroup_1         ((uint32_t)0x600) /*!< 1 bits for pre-emption priority
+                                                            3 bits for subpriority */
+#define NVIC_PriorityGroup_2         ((uint32_t)0x500) /*!< 2 bits for pre-emption priority
+                                                            2 bits for subpriority */
+#define NVIC_PriorityGroup_3         ((uint32_t)0x400) /*!< 3 bits for pre-emption priority
+                                                            1 bits for subpriority */
+#define NVIC_PriorityGroup_4         ((uint32_t)0x300) /*!< 4 bits for pre-emption priority
+                                                            0 bits for subpriority */
 
 typedef enum
 {
@@ -51,9 +64,21 @@ typedef struct
 } TIM_TypeDef;
 
 typedef enum {RESET = 0, SET = !RESET} FlagStatus, ITStatus;
+
+typedef enum {
+  EXTI_Trigger_Rising = 0x08,
+  EXTI_Trigger_Falling = 0x0C,
+  EXTI_Trigger_Rising_Falling = 0x10
+} EXTITrigger_TypeDef;
+
 typedef enum {DISABLE = 0, ENABLE = !DISABLE} FunctionalState;
 
 typedef enum {TEST_IRQ = 0 } IRQn_Type;
+
+typedef struct {
+    uint32_t ISR;
+    uint32_t IFCR;
+} DMA_TypeDef;
 
 typedef struct {
     void* test;
@@ -70,6 +95,16 @@ void DMA_ClearFlag(uint32_t);
 #define WS2811_DMA_HANDLER_IDENTIFER 0
 
 #define MAX_SIMULTANEOUS_ADJUSTMENT_COUNT 6
+
+#define USE_ADC
+
+#define ADC_CHANNEL_COUNT 5
+
+#define ADC_BATTERY     ADC_CHANNEL0
+#define ADC_AMPERAGE     ADC_CHANNEL1
+#define ADC_EXTERNAL    ADC_CHANNEL2
+#define ADC_POWER_12V   ADC_CHANNEL3
+#define ADC_POWER_5V    ADC_CHANNEL4
 
 typedef enum
 {

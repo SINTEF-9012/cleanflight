@@ -22,8 +22,8 @@
 #include <string.h>
 
 #include <platform.h>
-#include "build_config.h"
-#include "debug.h"
+#include "build/build_config.h"
+#include "build/debug.h"
 
 #include "common/maths.h"
 #include "common/utils.h"
@@ -31,7 +31,6 @@
 #include "config/parameter_group.h"
 #include "config/parameter_group_ids.h"
 
-#include "config/config.h"
 #include "config/feature.h"
 #include "config/config_reset.h"
 
@@ -39,7 +38,9 @@
 #include "drivers/adc.h"
 
 #include "io/serial.h"
-#include "io/rc_controls.h"
+
+#include "fc/rc_controls.h"
+#include "fc/config.h"
 
 #include "flight/failsafe.h"
 
@@ -48,6 +49,7 @@
 #include "drivers/pwm_rx.h"
 #include "drivers/system.h"
 
+#include "rx/rx.h"
 #include "rx/pwm.h"
 #include "rx/sbus.h"
 #include "rx/spektrum.h"
@@ -56,8 +58,8 @@
 #include "rx/msp.h"
 #include "rx/xbus.h"
 #include "rx/ibus.h"
+#include "rx/srxl.h"
 
-#include "rx/rx.h"
 
 //#define DEBUG_RX_SIGNAL_LOSS
 
@@ -109,7 +111,8 @@ PG_RESET_TEMPLATE(rxConfig_t, rxConfig,
     .rssi_scale = RSSI_SCALE_DEFAULT,
 );
 
-void pgResetFn_channelRanges(rxChannelRangeConfiguration_t *instance) {
+void pgResetFn_channelRanges(rxChannelRangeConfiguration_t *instance)
+{
     // set default calibration to full range and 1:1 mapping
     for (int i = 0; i < NON_AUX_CHANNEL_COUNT; i++) {
         instance[i].min = PWM_RANGE_MIN;
@@ -127,23 +130,27 @@ void pgResetFn_failsafeChannelConfigs(rxFailsafeChannelConfig_t *instance)
     }
 }
 
-static uint16_t nullReadRawRC(rxRuntimeConfig_t *rxRuntimeConfig, uint8_t channel) {
+static uint16_t nullReadRawRC(const rxRuntimeConfig_t *rxRuntimeConfig, uint8_t channel)
+{
     UNUSED(rxRuntimeConfig);
     UNUSED(channel);
 
     return PPM_RCVR_TIMEOUT;
 }
 
-static rcReadRawDataPtr rcReadRawFunc = nullReadRawRC;
-static uint16_t rxRefreshRate;
+static uint8_t nullFrameStatus(void)
+{
+    return RX_FRAME_PENDING;
+}
 
-void serialRxInit(rxConfig_t *rxConfig);
+bool serialRxInit(const rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig);
 
 #define REQUIRED_CHANNEL_MASK 0x0F // first 4 channels
 
 static uint8_t validFlightChannelMask;
 
-STATIC_UNIT_TESTED void rxResetFlightChannelStatus(void) {
+STATIC_UNIT_TESTED void rxResetFlightChannelStatus(void)
+{
     validFlightChannelMask = REQUIRED_CHANNEL_MASK;
 }
 
@@ -172,6 +179,9 @@ void rxInit(modeActivationCondition_t *modeActivationConditions)
     uint8_t i;
     uint16_t value;
 
+    rxRuntimeConfig.rcReadRawFn = nullReadRawRC;
+    rxRuntimeConfig.rcFrameStatusFn = nullFrameStatus;
+
     rcSampleIndex = 0;
 
     for (i = 0; i < MAX_SUPPORTED_RC_CHANNEL_COUNT; i++) {
@@ -198,59 +208,54 @@ void rxInit(modeActivationCondition_t *modeActivationConditions)
 
 #ifdef SERIAL_RX
     if (feature(FEATURE_RX_SERIAL)) {
-        serialRxInit(rxConfig());
+        const bool enabled = serialRxInit(rxConfig(), &rxRuntimeConfig);
+        if (!enabled) {
+            featureClear(FEATURE_RX_SERIAL);
+            rxRuntimeConfig.rcReadRawFn = nullReadRawRC;
+        }
     }
 #endif
 
     if (feature(FEATURE_RX_MSP)) {
-        rxMspInit(&rxRuntimeConfig, &rcReadRawFunc);
+        rxMspInit(rxConfig(), &rxRuntimeConfig);
     }
 
     if (feature(FEATURE_RX_PPM) || feature(FEATURE_RX_PARALLEL_PWM)) {
-        rxRefreshRate = 20000;
-        rxPwmInit(&rxRuntimeConfig, &rcReadRawFunc);
+        rxPwmInit(rxConfig(), &rxRuntimeConfig);
     }
 }
 
 #ifdef SERIAL_RX
-void serialRxInit(rxConfig_t *rxConfig)
+bool serialRxInit(const rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig)
 {
     bool enabled = false;
     switch (rxConfig->serialrx_provider) {
         case SERIALRX_SPEKTRUM1024:
-            rxRefreshRate = 22000;
-            enabled = spektrumInit(&rxRuntimeConfig, &rcReadRawFunc);
+            enabled = spektrumInit(rxConfig, rxRuntimeConfig);
             break;
         case SERIALRX_SPEKTRUM2048:
-            rxRefreshRate = 11000;
-            enabled = spektrumInit(&rxRuntimeConfig, &rcReadRawFunc);
+            enabled = spektrumInit(rxConfig, rxRuntimeConfig);
             break;
         case SERIALRX_SBUS:
-            rxRefreshRate = 11000;
-            enabled = sbusInit(&rxRuntimeConfig, &rcReadRawFunc);
+            enabled = sbusInit(rxConfig, rxRuntimeConfig);
             break;
         case SERIALRX_SUMD:
-            rxRefreshRate = 11000;
-            enabled = sumdInit(&rxRuntimeConfig, &rcReadRawFunc);
+            enabled = sumdInit(rxConfig, rxRuntimeConfig);
             break;
         case SERIALRX_SUMH:
-            rxRefreshRate = 11000;
-            enabled = sumhInit(&rxRuntimeConfig, &rcReadRawFunc);
+            enabled = sumhInit(rxConfig, rxRuntimeConfig);
             break;
-        case SERIALRX_XBUS_MODE_B:
+        case SERIALRX_SRXL:
+            enabled = srxlInit(rxConfig, rxRuntimeConfig);
+            break;
         case SERIALRX_XBUS_MODE_B_RJ01:
-            rxRefreshRate = 11000;
-            enabled = xBusInit(&rxRuntimeConfig, &rcReadRawFunc);
+            enabled = xBusInit(rxConfig, rxRuntimeConfig);
             break;
         case SERIALRX_IBUS:
-            enabled = ibusInit(&rxRuntimeConfig, &rcReadRawFunc);
+            enabled = ibusInit(rxConfig, rxRuntimeConfig);
             break;
     }
-
-    if (!enabled) {
-        featureClear(FEATURE_RX_SERIAL);
-        rcReadRawFunc = nullReadRawRC;
-    }
+    return enabled;
 }
 
 uint8_t serialRxFrameStatus(void)
@@ -274,13 +279,14 @@ uint8_t serialRxFrameStatus(void)
             return sumdFrameStatus();
         case SERIALRX_SUMH:
             return sumhFrameStatus();
-        case SERIALRX_XBUS_MODE_B:
+        case SERIALRX_SRXL:
+						return srxlFrameStatus();
         case SERIALRX_XBUS_MODE_B_RJ01:
             return xBusFrameStatus();
         case SERIALRX_IBUS:
             return ibusFrameStatus();
     }
-    return SERIAL_RX_FRAME_PENDING;
+    return RX_FRAME_PENDING;
 }
 #endif
 
@@ -301,7 +307,8 @@ bool rxAreFlightChannelsValid(void)
 {
     return rxFlightChannelsValid;
 }
-static bool isRxDataDriven(void) {
+static bool isRxDataDriven(void)
+{
     return !(feature(FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM));
 }
 
@@ -344,9 +351,9 @@ void updateRx(uint32_t currentTime)
     if (feature(FEATURE_RX_SERIAL)) {
         uint8_t frameStatus = serialRxFrameStatus();
 
-        if (frameStatus & SERIAL_RX_FRAME_COMPLETE) {
+        if (frameStatus & RX_FRAME_COMPLETE) {
             rxDataReceived = true;
-            rxIsInFailsafeMode = (frameStatus & SERIAL_RX_FRAME_FAILSAFE) != 0;
+            rxIsInFailsafeMode = (frameStatus & RX_FRAME_FAILSAFE) != 0;
             rxSignalReceived = !rxIsInFailsafeMode;
             needRxSignalBefore = currentTime + DELAY_10_HZ;
         }
@@ -354,11 +361,11 @@ void updateRx(uint32_t currentTime)
 #endif
 
     if (feature(FEATURE_RX_MSP)) {
-        rxDataReceived = rxMspFrameComplete();
-
-        if (rxDataReceived) {
-            rxSignalReceived = true;
+        const uint8_t frameStatus = rxMspFrameStatus();
+        if (frameStatus & RX_FRAME_COMPLETE) {
+            rxDataReceived = true;
             rxIsInFailsafeMode = false;
+            rxSignalReceived = true;
             needRxSignalBefore = currentTime + DELAY_5_HZ;
         }
     }
@@ -471,7 +478,7 @@ static void readRxChannelsApplyRanges(void)
         uint8_t rawChannel = calculateChannelRemapping(rxConfig()->rcmap, ARRAYLEN(rxConfig()->rcmap), channel);
 
         // sample the channel
-        uint16_t sample = rcReadRawFunc(&rxRuntimeConfig, rawChannel);
+        uint16_t sample = rxRuntimeConfig.rcReadRawFn(&rxRuntimeConfig, rawChannel);
 
         // TODO: JAKOB SINTEF - Put offset override values here
         // Use the static mapping from "rc_alias_e" in "rc_controls.h"
@@ -602,7 +609,7 @@ void updateRSSIPWM(void)
 
 void updateRSSIADC(uint32_t currentTime)
 {
-#ifndef USE_ADC
+#ifndef ADC_RSSI
     UNUSED(currentTime);
 #else
     static uint8_t adcRssiSamples[RSSI_ADC_SAMPLE_COUNT];
@@ -644,6 +651,7 @@ void updateRSSI(uint32_t currentTime)
     }
 }
 
-void initRxRefreshRate(uint16_t *rxRefreshRatePtr) {
-    *rxRefreshRatePtr = rxRefreshRate;
+uint16_t rxGetRefreshRate(void)
+{
+    return rxRuntimeConfig.rxRefreshRate;
 }

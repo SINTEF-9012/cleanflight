@@ -7,7 +7,6 @@ doc_files=(
 	'Safety.md'
 	'Installation.md'
 	'Configuration.md'
-	'Cli.md'
 	'Serial.md'
 	'Rx.md'
 	'Spektrum bind.md'
@@ -27,6 +26,7 @@ doc_files=(
 	'Gtune.md'
 	'Blackbox.md'
 	'Migrating from baseflight.md'
+	'VTX.md'
 	'Boards.md'
     'Board - SPRacingF3Mini.md'
     'Board - SPRacingF3.md'
@@ -39,8 +39,8 @@ doc_files=(
     'Board - AlienFlight.md'
     'Board - CC3D.md'
     'Board - CJMCU.md'
-    'Board - Olimexino.md'
     'Board - ChebuzzF3.md'
+    'Cli.md'
 )
 
 if which gimli >/dev/null; then

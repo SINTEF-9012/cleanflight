@@ -27,10 +27,11 @@
 
 #include <platform.h>
 
-#include "build_config.h"
+#include "build/build_config.h"
 
 #include "config/parameter_group.h"
 
+#include "drivers/dma.h"
 #include "drivers/system.h"
 
 #include "drivers/serial.h"
@@ -47,17 +48,22 @@
 #define IBUS_BAUDRATE 115200
 
 static bool ibusFrameDone = false;
+static uint8_t ibusFramePosition = 0;
 static uint32_t ibusChannelData[IBUS_MAX_CHANNEL];
 
 static void ibusDataReceive(uint16_t c);
-static uint16_t ibusReadRawRC(rxRuntimeConfig_t *rxRuntimeConfig, uint8_t chan);
+static uint16_t ibusReadRawRC(const rxRuntimeConfig_t *rxRuntimeConfig, uint8_t chan);
+uint8_t ibusFrameStatus(void);
 
-bool ibusInit(rxRuntimeConfig_t *rxRuntimeConfig, rcReadRawDataPtr *callback)
+bool ibusInit(const rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig)
 {
-    if (callback)
-        *callback = ibusReadRawRC;
+    UNUSED(rxConfig);
 
     rxRuntimeConfig->channelCount = IBUS_MAX_CHANNEL;
+    rxRuntimeConfig->rxRefreshRate = 11000;
+
+    rxRuntimeConfig->rcReadRawFn = ibusReadRawRC;
+    rxRuntimeConfig->rcFrameStatusFn = ibusFrameStatus;
 
     serialPortConfig_t *portConfig = findSerialPortConfig(FUNCTION_RX_SERIAL);
     if (!portConfig) {
@@ -76,7 +82,6 @@ static void ibusDataReceive(uint16_t c)
 {
     uint32_t ibusTime;
     static uint32_t ibusTimeLast;
-    static uint8_t ibusFramePosition;
 
     ibusTime = micros();
 
@@ -100,7 +105,7 @@ static void ibusDataReceive(uint16_t c)
 uint8_t ibusFrameStatus(void)
 {
     uint8_t i, offset;
-    uint8_t frameStatus = SERIAL_RX_FRAME_PENDING;
+    uint8_t frameStatus = RX_FRAME_PENDING;
     uint16_t chksum, rxsum;
 
     if (!ibusFrameDone) {
@@ -119,13 +124,14 @@ uint8_t ibusFrameStatus(void)
         for (i = 0, offset = 2; i < IBUS_MAX_CHANNEL; i++, offset += 2) {
             ibusChannelData[i] = ibus[offset] + (ibus[offset + 1] << 8);
         }
-        frameStatus = SERIAL_RX_FRAME_COMPLETE;
+        frameStatus = RX_FRAME_COMPLETE;
     }
-
+    ibusFramePosition = 0;
+    
     return frameStatus;
 }
 
-static uint16_t ibusReadRawRC(rxRuntimeConfig_t *rxRuntimeConfig, uint8_t chan)
+static uint16_t ibusReadRawRC(const rxRuntimeConfig_t *rxRuntimeConfig, uint8_t chan)
 {
     UNUSED(rxRuntimeConfig);
     return ibusChannelData[chan];
